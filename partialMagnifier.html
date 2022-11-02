@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<script language="Javascript">
+//
+// This method Gets URL Parameters (GUP)
+//
+function gup( name )
+{
+  var regexS = "[\\?&]"+name+"=([^&#]*)";
+  var regex = new RegExp( regexS );
+  var tmpURL = window.location.href;
+  var results = regex.exec( tmpURL );
+  if( results == null )
+    return "";
+  else
+    return results[1];
+}
+
+//
+// This method decodes the query parameters that were URL-encoded
+//
+function decode(strToDecode)
+{
+  var encoded = strToDecode;
+  return unescape(encoded.replace(/\+/g,  " "));
+}
+
+</script>
+<head>
+<title>Bar Chart</title>
+
+
+</head>
+<body>
+  <p>You will see a blurred visualization in the following page, use the partial magnifier to help you read the visualization and answer the question below the visualization. </p>
+  <canvas id="canvas" ></canvas>
+<canvas id="canvas2" style="display:none"></canvas>
+<div class="input">
+            <input type="range" style="display: block; width: 800px;" id="scroll_range" min="50" max="200" step="10"
+                value="100">
+                size:<input type='textarea' id='size'>
+
+    
+        </div>
+    </div>
+
+      <p id='question'>
+  What is the approximate sum of trading volumes in category art from January to March?
+</p>
+
+<form id="testForm" method="POST" action="https://www.mturk.com/mturk/externalSubmit">
+
+Your answer: <input type="textarea" id='answer'>
+    <input type="hidden" id="assignmentId" name="assignmentId" value="">
+    <input type="hidden" id="imgId" name="imgId" value="">
+
+    <input id="submitButton" type="submit" name="Submit" value="Submit">
+</form>
+
+    <p>Click the "Submit" button to submit your answer</p>
+
+
+
+<script language="Javascript">
+    document.getElementById('question').innerHTML = decode(gup('question'));
+    var blurredImg= decode(gup('imgSrcB'));
+    var clearImg= decode(gup('imgSrc'));
+    document.getElementById('assignmentId').setAttribute("value", gup('assignmentId'));
+
+
+
+    //
+    // Check if the worker is PREVIEWING the HIT or if they've ACCEPTED the HIT
+    //
+    if (gup('assignmentId') == "ASSIGNMENT_ID_NOT_AVAILABLE")
+    {
+  // If we're previewing, disable the button and give it a helpful message
+  document.getElementById('submitButton').disabled = true;
+  document.getElementById('submitButton').value = "You must ACCEPT the HIT before you can submit the results.";
+    } else {
+        var form = document.getElementById('testForm');
+        if (document.referrer && ( document.referrer.indexOf('workersandbox') != -1) ) {
+            form.action = "https://workersandbox.mturk.com/mturk/externalSubmit";
+        }
+    }
+
+</script>
+
+
+<script type="text/javascript">
+
+
+
+var scale = 2;
+var mr = 100;
+var photo = {
+  //初始化
+  init: function() {
+    var that = this;
+
+    that.slider = document.getElementById('scroll_range')
+    that.magSize=document.getElementById('size')
+
+    that.magSize.value=mr
+
+    that.canvas = document.getElementById('canvas');
+    that.ctx = that.canvas.getContext('2d');
+
+    that.canvas2 = document.getElementById('canvas2');
+    that.ctx2 = that.canvas2.getContext('2d');
+
+    that.canvas.width = 800;
+    that.canvas.height = 500;
+
+    that.canvas2.width = that.canvas.width * scale;
+    that.canvas2.height = that.canvas.height * scale;
+    that.image1 = new Image();
+    that.image1.src = "./barchartSimuv.png";
+
+    that.image2 = new Image();
+    that.image2.src = "./barchartSimu.png";
+
+    that.slider.onmousemove = () => {
+
+            mr=that.slider.value;
+
+            console.log(mr);
+            photo.init();
+
+        }
+
+    that.image1.onload = function() {
+      that.ctx.drawImage(that.image1, 0, 0, that.canvas.width, that.canvas.height);
+    };
+
+    that.image2.onload = function() {
+      that.ctx2.drawImage(that.image2, 0, 0, that.canvas2.width, that.canvas2.height);
+      that.moveEvt();
+    };
+  },
+
+  bigerImage: function(x, y) {
+    var that = this;
+    var imageX = x * scale,
+      imageY = y * scale,
+      sx = imageX - mr,
+      sy = imageY - mr;
+
+    var dx = x - mr,
+      dy = y - mr;
+
+    that.ctx.save();
+
+    that.ctx.strokeStyle = "#9eddf1";
+    that.ctx.lineWidth = 3;
+
+    that.ctx.beginPath();
+    that.ctx.arc(x, y, mr, 0, Math.PI * 2);
+
+
+    that.ctx.shadowColor = "#6ed25b";
+    that.ctx.shadowBlur = 10;
+
+    that.ctx.stroke();
+    that.ctx.clip();
+
+    that.ctx.drawImage(that.canvas2, sx, sy, 2 * mr, 2 * mr, dx, dy, 2 * mr, 2 * mr);
+
+    that.ctx.restore();
+  },
+
+  //移动
+  moveEvt: function() {
+    var that = this;
+    that.canvas.onmousedown = function(e) {
+    	that.flag = true;
+      that.showImage(e);
+    }
+
+    that.canvas.onmousemove = function(e) {
+      if (that.flag) {
+        that.showImage(e)
+      }
+    }
+
+    that.canvas.onmouseup = function(e) {
+      that.hideImage(e)
+    }
+
+    that.canvas.onmouseout = function(e) {
+      that.hideImage(e)
+    }
+  },
+
+  showImage: function(e) {
+    e.preventDefault()
+    var x = e.offsetX,
+      y = e.offsetY,
+      that = this;
+    that.ctx.clearRect(0, 0, that.canvas.width, that.canvas.height);
+    that.ctx.drawImage(that.image1, 0, 0, that.canvas.width, that.canvas.height);
+    that.bigerImage(x, y);
+  },
+
+  hideImage: function(e) {
+    e.preventDefault()
+    var that = this;
+    
+    that.flag = false;
+    that.ctx.clearRect(0, 0, that.canvas.width, that.canvas.height);
+    that.ctx.drawImage(that.image1, 0, 0, that.canvas.width, that.canvas.height);
+  }
+}
+
+window.onload = function() {
+  photo.init();
+}
+</script>
+
+</body>
+</html>
